@@ -49,7 +49,7 @@ namespace CassandraSupplyCollectorTests
             };
 
             var result = _instance.GetDataCollectionMetrics(_container);
-            Assert.Equal(2, result.Count);
+            Assert.Equal(4, result.Count);
 
             foreach (var metric in metrics)
             {
@@ -82,14 +82,42 @@ namespace CassandraSupplyCollectorTests
                 Assert.Contains(column.Name, (IDictionary<string, string>)dataTypes);
                 Assert.Equal(column.DbDataType, dataTypes[column.Name]);
             }
+
+            dataTypes = new Dictionary<string, string>() {
+                {"id", "int"},
+                {"name", "text"},
+                {"email", "set<text>"},
+                {"coursenames", "list<text>"}
+            };
+            columns = elements.Where(x => x.Collection.Name.Equals("teacher")).ToArray();
+            Assert.Equal(4, columns.Length);
+
+            foreach (var column in columns)
+            {
+                Assert.Contains(column.Name, (IDictionary<string, string>)dataTypes);
+                Assert.Equal(column.DbDataType, dataTypes[column.Name]);
+            }
+
+            dataTypes = new Dictionary<string, string>() {
+                {"id", "int"},
+                {"prerq", "map<text, text>"}
+            };
+            columns = elements.Where(x => x.Collection.Name.Equals("course")).ToArray();
+            Assert.Equal(2, columns.Length);
+
+            foreach (var column in columns)
+            {
+                Assert.Contains(column.Name, (IDictionary<string, string>)dataTypes);
+                Assert.Equal(column.DbDataType, dataTypes[column.Name]);
+            }
         }
 
         [Fact]
         public void GetTableNamesTest()
         {
             var (tables, elements) = _instance.GetSchema(_container);
-            Assert.Equal(2, tables.Count);
-            Assert.Equal(11, elements.Count);
+            Assert.Equal(4, tables.Count);
+            Assert.Equal(17, elements.Count);
 
             var tableNames = new string[] { "test_data_types", "test_index"};
             foreach (var tableName in tableNames)
