@@ -60,55 +60,15 @@ namespace CassandraSupplyCollectorTests
         }
 
         [Fact]
-        public void DataTypesTest()
+        public void GetSchemaTest()
         {
             var (tables, elements) = _instance.GetSchema(_container);
-            var dataTypes = new Dictionary<string, string>() {
-                {"int_field", "int"},
-                {"text_field", "text"},
-                {"bool_field", "boolean"},
-                {"float_field", "float"},
-                {"double_field", "double"},
-                {"date_field", "date"},
-                {"time_field", "time"},
-                {"timestamp_field", "timestamp"},
-                {"uuid_field", "uuid"}
-            };
-            var columns = elements.Where(x => x.Collection.Name.Equals("test_data_types")).ToArray();
-            Assert.Equal(9, columns.Length);
+            Assert.Equal(4, tables.Count);
+            Assert.Equal(17, elements.Count);
 
-            foreach (var column in columns)
+            foreach (DataEntity element in elements)
             {
-                Assert.Contains(column.Name, (IDictionary<string, string>)dataTypes);
-                Assert.Equal(column.DbDataType, dataTypes[column.Name]);
-            }
-
-            dataTypes = new Dictionary<string, string>() {
-                {"id", "int"},
-                {"name", "text"},
-                {"email", "set<text>"},
-                {"coursenames", "list<text>"}
-            };
-            columns = elements.Where(x => x.Collection.Name.Equals("teacher")).ToArray();
-            Assert.Equal(4, columns.Length);
-
-            foreach (var column in columns)
-            {
-                Assert.Contains(column.Name, (IDictionary<string, string>)dataTypes);
-                Assert.Equal(column.DbDataType, dataTypes[column.Name]);
-            }
-
-            dataTypes = new Dictionary<string, string>() {
-                {"id", "int"},
-                {"prerq", "map<text, text>"}
-            };
-            columns = elements.Where(x => x.Collection.Name.Equals("course")).ToArray();
-            Assert.Equal(2, columns.Length);
-
-            foreach (var column in columns)
-            {
-                Assert.Contains(column.Name, (IDictionary<string, string>)dataTypes);
-                Assert.Equal(column.DbDataType, dataTypes[column.Name]);
+                Assert.NotEqual(string.Empty, element.DbDataType);
             }
         }
 
@@ -117,9 +77,8 @@ namespace CassandraSupplyCollectorTests
         {
             var (tables, elements) = _instance.GetSchema(_container);
             Assert.Equal(4, tables.Count);
-            Assert.Equal(17, elements.Count);
 
-            var tableNames = new string[] { "test_data_types", "test_index"};
+            var tableNames = new string[] { "test_data_types", "test_index", "course", "teacher" };
             foreach (var tableName in tableNames)
             {
                 var table = tables.Find(x => x.Name.Equals(tableName));
