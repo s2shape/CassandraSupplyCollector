@@ -70,6 +70,12 @@ namespace CassandraSupplyCollectorTests
             {
                 Assert.NotEqual(string.Empty, element.DbDataType);
             }
+
+            var columns = elements.Where(x => x.Collection.Name.Equals("teacher")).ToArray();
+            Assert.Equal(4, columns.Length);
+
+            columns = elements.Where(x => x.Collection.Name.Equals("course")).ToArray();
+            Assert.Equal(3, columns.Length);
         }
 
         [Fact]
