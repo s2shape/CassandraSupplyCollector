@@ -2,8 +2,8 @@
 using System.Collections.Generic;
 using S2.BlackSwan.SupplyCollector;
 using S2.BlackSwan.SupplyCollector.Models;
-using Cassandra;
 using System.Linq;
+using Cassandra;
 
 namespace CassandraSupplyCollector
 {
@@ -107,48 +107,23 @@ namespace CassandraSupplyCollector
 
         public override (List<DataCollection>, List<DataEntity>) GetSchema(DataContainer container)
         {
-            var collections = new List<DataCollection>();
-            var entities = new List<DataEntity>();
-
             Dictionary<string, string> connectionStringValues = GetConnectionStringValues(container.ConnectionString);
-            try
-            {
-                ICluster _cluster = Cluster.Builder().AddContactPoint(connectionStringValues["address"]).Build();
-                ISession _session = _cluster.Connect();
-                _session.Execute("USE " + connectionStringValues["keyspace"]);
+            ICluster _cluster = Cluster.Builder().AddContactPoint(connectionStringValues["address"]).Build();
+            var tables = _cluster.Metadata.GetKeyspace(connectionStringValues["keyspace"]).GetTablesMetadata();
 
-                string query = "select * from system_schema.columns where keyspace_name = '" + connectionStringValues["keyspace"] + "'";
-                RowSet res = _session.Execute(query);
+            var dataEntities = tables.SelectMany(t => GetSchema(connectionStringValues["keyspace"], t.Name, _cluster, container));
+            var dataCollections = tables.Select(t => new DataCollection(container, t.Name));
 
-                var rows = res.GetRows().ToList();
-                if (rows.Count() > 0)
-                {
-                    DataCollection collection = null;
-                    foreach (Row row in rows)
-                    {
-                        var table = row.GetValue<string>("table_name");
-                        var columnName = row.GetValue<string>("column_name");
-                        var dataType = row.GetValue<string>("type");
+            return (dataCollections.ToList(), dataEntities.ToList());
+        }
 
-                        if (collection == null || !collection.Name.Equals(table))
-                        {
-                            collection = new DataCollection(container, table);
-                            collections.Add(collection);
-                        }
+        private List<DataEntity> GetSchema(string keyspace, string tableName, ICluster cluster, DataContainer container)
+        {
+            var table = cluster.Metadata.GetTable(keyspace, tableName);
+            var dataCollection = new DataCollection(container, tableName);
+            var dataEntities = table.TableColumns.Select(s => new DataEntity(s.Name, ConvertDataType(s.TypeCode.ToString()), s.TypeCode.ToString(), container, dataCollection)).ToList();
 
-                        entities.Add(new DataEntity(columnName, ConvertDataType(dataType), dataType, container, collection) {
-
-                        });
-                    }
-                }
-            }
-            catch (Exception)
-            {
-                return (collections, entities);
-            }
-
-
-            return (collections, entities);
+            return dataEntities;
         }
 
         public override bool TestConnection(DataContainer container)
@@ -179,36 +154,53 @@ namespace CassandraSupplyCollector
             return _connectionStringValues;
         }
 
-        private DataType ConvertDataType(string dbDataType)
+        private DataType ConvertDataType(String dbDataType)
         {
-            if ("int".Equals(dbDataType))
+            if ("Int".Equals(dbDataType))
                 return DataType.Int;
-            else if ("ascii".Equals(dbDataType))
+            else if ("Ascii".Equals(dbDataType))
                 return DataType.String;
-            else if ("bigint".Equals(dbDataType))
+            else if ("Bigint".Equals(dbDataType))
                 return DataType.Long;
-            else if ("boolean".Equals(dbDataType))
+            else if ("Boolean".Equals(dbDataType))
                 return DataType.Boolean;
             else if ("counter".Equals(dbDataType))
                 return DataType.Int;
-            else if ("date".Equals(dbDataType))
+            else if ("Date".Equals(dbDataType))
                 return DataType.DateTime;
-            else if ("double".Equals(dbDataType))
+            else if ("Double".Equals(dbDataType))
                 return DataType.Double;
-            else if ("float".Equals(dbDataType))
+            else if ("Float".Equals(dbDataType))
                 return DataType.Float;
-            else if ("text".Equals(dbDataType))
+            else if ("Text".Equals(dbDataType))
                 return DataType.String;
-            else if ("time".Equals(dbDataType))
+            else if ("Time".Equals(dbDataType))
                 return DataType.DateTime;
-            else if ("timestamp".Equals(dbDataType))
+            else if ("Timestamp".Equals(dbDataType))
                 return DataType.DateTime;
-            else if ("uuid".Equals(dbDataType))
+            else if ("Uuid".Equals(dbDataType))
                 return DataType.Guid;
-            else if ("varchar".Equals(dbDataType))
+            else if ("Varchar".Equals(dbDataType))
                 return DataType.String;
 
             return DataType.Unknown;
         }
     }
+
+    public static class LinqExtensions
+    {
+        public static IEnumerable<TSource> DistinctBy<TSource, TKey>
+            (this IEnumerable<TSource> source, Func<TSource, TKey> keySelector)
+        {
+            HashSet<TKey> seenKeys = new HashSet<TKey>();
+            foreach (TSource element in source)
+            {
+                if (seenKeys.Add(keySelector(element)))
+                {
+                    yield return element;
+                }
+            }
+        }
+    }
+
 }
