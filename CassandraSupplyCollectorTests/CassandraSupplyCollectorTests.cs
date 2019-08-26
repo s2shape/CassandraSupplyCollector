@@ -49,7 +49,7 @@ namespace CassandraSupplyCollectorTests
             };
 
             var result = _instance.GetDataCollectionMetrics(_container);
-            Assert.Equal(4, result.Count);
+            Assert.Equal(5, result.Count);
 
             foreach (var metric in metrics)
             {
@@ -63,8 +63,8 @@ namespace CassandraSupplyCollectorTests
         public void GetSchemaTest()
         {
             var (tables, elements) = _instance.GetSchema(_container);
-            Assert.Equal(4, tables.Count);
-            Assert.Equal(17, elements.Count);
+            Assert.Equal(5, tables.Count);
+            Assert.Equal(23, elements.Count);
 
             foreach (DataEntity element in elements)
             {
@@ -76,9 +76,9 @@ namespace CassandraSupplyCollectorTests
         public void GetTableNamesTest()
         {
             var (tables, elements) = _instance.GetSchema(_container);
-            Assert.Equal(4, tables.Count);
+            Assert.Equal(5, tables.Count);
 
-            var tableNames = new string[] { "test_data_types", "test_index", "course", "teacher" };
+            var tableNames = new string[] { "test_data_types", "test_index", "course", "teacher", "user" };
             foreach (var tableName in tableNames)
             {
                 var table = tables.Find(x => x.Name.Equals(tableName));
