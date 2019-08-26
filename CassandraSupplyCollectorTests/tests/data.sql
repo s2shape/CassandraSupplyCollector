@@ -20,5 +20,12 @@ CREATE TABLE IF NOT EXISTS teacher(id int, name text, email set<text>, coursenam
 INSERT INTO teacher(id, name, email, coursenames) VALUES(1, 'Hamilton', {'abc@gmail.com', 'xyz@gmail.com'}, ['Data Science', 'Neural Network']);
 
 DROP TABLE IF EXISTS course;
-CREATE TABLE IF NOT EXISTS course(id int, prerq map<text, text>, PRIMARY KEY(id));
-INSERT INTO course(id, prerq) VALUES(1, {'DataScience' : 'Datbase', 'Neural Network' : 'Artificial Intelligence'});
+CREATE TABLE IF NOT EXISTS course(id int, prerq map<text, int>, PRIMARY KEY(id));
+INSERT INTO course(id, prerq) VALUES(1, {'DataScience' : 1, 'Neural Network' : 2});
+
+DROP TABLE IF EXISTS user;
+DROP TYPE IF EXISTS address;
+DROP TYPE IF EXISTS phone;
+CREATE TYPE phone (alias text, number text);
+CREATE TYPE address (street text, ZIP int, phones set<frozen<phone>>);
+CREATE TABLE user (id int PRIMARY KEY, addr frozen<address>, main_phone frozen<phone>);
