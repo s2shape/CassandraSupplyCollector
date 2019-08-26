@@ -14,3 +14,11 @@ INSERT INTO test_index(id, name) VALUES(4, 'Wednesday');
 INSERT INTO test_index(id, name) VALUES(5, 'Thursday');
 INSERT INTO test_index(id, name) VALUES(6, 'Friday');
 INSERT INTO test_index(id, name) VALUES(7, 'Saturday');
+
+DROP TABLE IF EXISTS teacher;
+CREATE TABLE IF NOT EXISTS teacher(id int, name text, email set<text>, coursenames list<text>, PRIMARY KEY(id));
+INSERT INTO teacher(id, name, email, coursenames) VALUES(1, 'Hamilton', {'abc@gmail.com', 'xyz@gmail.com'}, ['Data Science', 'Neural Network']);
+
+DROP TABLE IF EXISTS course;
+CREATE TABLE IF NOT EXISTS course(id int, prerq map<text, text>, PRIMARY KEY(id));
+INSERT INTO course(id, prerq) VALUES(1, {'DataScience' : 'Datbase', 'Neural Network' : 'Artificial Intelligence'});
