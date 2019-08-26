@@ -121,9 +121,70 @@ namespace CassandraSupplyCollector
         {
             var table = cluster.Metadata.GetTable(keyspace, tableName);
             var dataCollection = new DataCollection(container, tableName);
-            var dataEntities = table.TableColumns.Select(s => new DataEntity(s.Name, ConvertDataType(s.TypeCode.ToString()), s.TypeCode.ToString(), container, dataCollection)).ToList();
+            var dataEntities = new List<DataEntity>();
+            foreach (TableColumn column in table.TableColumns)
+            {
+                AddEntityAndChildren(cluster, column, container, dataCollection, dataEntities);
+            }
+            
 
             return dataEntities;
+        }
+
+        private void AddEntityAndChildren(ICluster cluster, TableColumn column, DataContainer container, DataCollection dataCollection, List<DataEntity> entities)
+        {
+            switch (column.TypeCode)
+            {
+                case ColumnTypeCode.List:
+                    var listInfo = (ListColumnInfo)column.TypeInfo;
+                    entities.AddRange(GetDataEntitiesFromArray(cluster, column.Name, listInfo.ValueTypeCode, container, dataCollection));
+                    break;
+                case ColumnTypeCode.Set:
+                    var setInfo = (SetColumnInfo)column.TypeInfo;
+                    if (setInfo != null)
+                        entities.AddRange(GetDataEntitiesFromArray(cluster, column.Name, setInfo.KeyTypeCode, container, dataCollection));
+                    break;
+                case ColumnTypeCode.Map:
+                    var mapInfo = (MapColumnInfo)column.TypeInfo;
+                    entities.AddRange(GetDataEntitiesFromArray(cluster, column.Name, mapInfo.KeyTypeCode, container, dataCollection));
+                    entities.AddRange(GetDataEntitiesFromArray(cluster, column.Name, mapInfo.ValueTypeCode, container, dataCollection));
+                    break;
+                case ColumnTypeCode.Udt:
+                    var udtInfo = (UdtColumnInfo)column.TypeInfo;
+                    var typeName = udtInfo.Name.Split(".")[1];
+                    entities.AddRange(GetDataEntitiesFromUdt(cluster, typeName, container, dataCollection));
+                    break;
+                default:
+                    entities.Add(new DataEntity(column.Name, ConvertDataType(column.TypeCode.ToString()), column.TypeCode.ToString(), container, dataCollection));
+                    break;
+            }
+        }
+
+        private List<DataEntity> GetDataEntitiesFromArray(ICluster cluster, String name, ColumnTypeCode type, DataContainer container, DataCollection dataCollection)
+        {
+            var entities = new List<DataEntity>();
+
+            TableColumn column = new TableColumn();
+            column.Name = name;
+            column.TypeCode = type;
+            AddEntityAndChildren(cluster, column, container, dataCollection, entities);
+
+            return entities;
+        }
+
+
+        private List<DataEntity> GetDataEntitiesFromUdt(ICluster cluster, String udtName, DataContainer container, DataCollection dataCollection)
+        {
+            var entities = new List<DataEntity>();
+            var udtTable = cluster.Metadata.GetUdtDefinition("test", udtName);
+            foreach (var field in udtTable.Fields)
+            {
+                TableColumn column = new TableColumn();
+                column.Name = field.Name;
+                column.TypeCode = field.TypeCode;
+                AddEntityAndChildren(cluster, column, container, dataCollection, entities);
+            }
+            return entities;
         }
 
         public override bool TestConnection(DataContainer container)
