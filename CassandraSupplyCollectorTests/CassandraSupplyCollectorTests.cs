@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using S2.BlackSwan.SupplyCollector.Models;
 using System.Linq;
 using Xunit;
+using Cassandra;
 
 namespace CassandraSupplyCollectorTests
 {
@@ -25,10 +26,18 @@ namespace CassandraSupplyCollectorTests
         [Fact]
         public void CollectSampleTest()
         {
-            var entity = new DataEntity("name", DataType.String, "character varying", _container, new DataCollection(_container, "test_index"));
+            var entity = new DataEntity("name", DataType.String, ColumnTypeCode.Text.ToString(), _container, new DataCollection(_container, "test_index"));
             var samples = _instance.CollectSample(entity, 5);
             Assert.Equal(5, samples.Count);
             Assert.Contains("Wednesday", samples);
+
+            entity = new DataEntity("coursenames", DataType.Unknown, ColumnTypeCode.List.ToString(), _container, new DataCollection(_container, "teacher"));
+            samples = _instance.CollectSample(entity, 1);
+            Assert.Contains("Data Science", samples);
+
+            entity = new DataEntity("prerq", DataType.Unknown, ColumnTypeCode.Map.ToString(), _container, new DataCollection(_container, "course"));
+            samples = _instance.CollectSample(entity, 1);
+            Assert.Contains("Neural Network", samples);
         }
 
         [Fact]
