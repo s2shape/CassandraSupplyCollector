@@ -47,7 +47,24 @@ namespace CassandraSupplyCollector
                 {
                     foreach(Row row in rows)
                     {
-                        result.Add(row.GetValue<string>(dataEntity.Name));
+                        if (dataEntity.DbDataType.Equals(ColumnTypeCode.Text.ToString()))
+                            result.Add(row.GetValue<string>(dataEntity.Name));
+                        else if (dataEntity.DbDataType.Equals(ColumnTypeCode.List.ToString()))
+                        {
+                            var list = row.GetValue<List<string>>(dataEntity.Name);
+                            foreach (var item in list)
+                                result.Add(item);
+                        }
+                        else if (dataEntity.DbDataType.Equals(ColumnTypeCode.Map.ToString()))
+                        {
+                            var list = row.GetValue<IDictionary<string, int>>(dataEntity.Name);
+                            foreach (var item in list)
+                            {
+                                result.Add(item.Key.ToString());
+                            }
+                                
+                        }
+
                     }
                 }
                 return result;
