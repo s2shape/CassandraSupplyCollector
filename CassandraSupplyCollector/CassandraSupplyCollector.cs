@@ -9,71 +9,59 @@ namespace CassandraSupplyCollector
 {
     public class CassandraSupplyCollector : SupplyCollectorBase
     {
-        public CassandraSupplyCollector()
-        {
-
+        public string BuildConnectionString(String address, int port, String keyspace, String username, String password) {
+            return new CassandraConnectionString(address, port, keyspace, username, password).Build();
         }
-
-        public String BuildConnectionString(String address, String port, String keyspace, String username, String password)
-        {
-            var connectionString = "";
-
-            connectionString = address + "/";
-            connectionString += port + "/";
-            connectionString += keyspace + "/";
-            connectionString += username + "/";
-            connectionString += password;
-
-            return connectionString;
-        }
-
 
         public override List<string> CollectSample(DataEntity dataEntity, int sampleSize)
         {
             var result = new List<string>();
 
-            Dictionary<string, string> connectionStringValues = GetConnectionStringValues(dataEntity.Container.ConnectionString);
+            var connection = CassandraConnectionString.Parse(dataEntity.Container.ConnectionString);
             try
             {
-                ICluster _cluster = Cluster.Builder().AddContactPoint(connectionStringValues["address"]).Build();
-                ISession _session = _cluster.Connect();
-                _session.Execute("USE " + connectionStringValues["keyspace"]);
+                using (var cluster = Cluster.Builder().AddContactPoint(connection.Address).Build()) {
+                    using (var session = cluster.Connect()) {
+                        session.Execute($"USE {connection.Keyspace}");
 
-                string query = $"SELECT {dataEntity.Name} FROM {dataEntity.Collection.Name} LIMIT {sampleSize}";
-                RowSet res = _session.Execute(query);
+                        string query = $"SELECT COUNT(*) FROM {dataEntity.Collection.Name}";
+                        RowSet res = session.Execute(query);
+                        var rowCount = res.GetRows().First();
+                        long totalRows = (long) rowCount[0];
 
-                var rows = res.GetRows().ToList();
-                if (rows.Count() > 0)
-                {
-                    foreach(Row row in rows)
-                    {
-                        if (dataEntity.DbDataType.Equals(ColumnTypeCode.Text.ToString()))
-                            result.Add(row.GetValue<string>(dataEntity.Name));
-                        else if (dataEntity.DbDataType.Equals(ColumnTypeCode.List.ToString()))
-                        {
-                            var list = row.GetValue<List<string>>(dataEntity.Name);
-                            foreach (var item in list)
-                                result.Add(item);
-                        }
-                        else if (dataEntity.DbDataType.Equals(ColumnTypeCode.Map.ToString()))
-                        {
-                            var list = row.GetValue<IDictionary<string, int>>(dataEntity.Name);
-                            foreach (var item in list)
-                            {
-                                result.Add(item.Key.ToString());
+                        double pct = 0.1 + (double)sampleSize / (totalRows <= 0 ? sampleSize : totalRows);
+                        var r = new Random();
+
+                        query = $"SELECT {dataEntity.Name} FROM {dataEntity.Collection.Name} LIMIT {sampleSize}";
+                        res = session.Execute(query);
+                        var rows = res.GetRows();
+                        foreach (Row row in rows) {
+                            if (dataEntity.DbDataType.Equals(ColumnTypeCode.Text.ToString())) {
+                                if (r.NextDouble() < pct)
+                                    result.Add(row.GetValue<string>(dataEntity.Name));
                             }
-                                
+                            else if (dataEntity.DbDataType.Equals(ColumnTypeCode.List.ToString())) {
+                                var list = row.GetValue<List<string>>(dataEntity.Name);
+                                foreach (var item in list)
+                                    if (r.NextDouble() < pct)
+                                        result.Add(item);
+                            }
+                            else if (dataEntity.DbDataType.Equals(ColumnTypeCode.Map.ToString())) {
+                                var list = row.GetValue<IDictionary<string, int>>(dataEntity.Name);
+                                foreach (var item in list)
+                                    if (r.NextDouble() < pct)
+                                        result.Add(item.Key);
+                            }
                         }
-
                     }
                 }
-                return result;
             }
             catch (Exception)
             {
-                return result;
+                // Nothing. TODO: rethrow or log
             }
 
+            return result;
         }
 
         public override List<string> DataStoreTypes()
@@ -85,34 +73,29 @@ namespace CassandraSupplyCollector
         {
             var dataCollectionMetrics = new List<DataCollectionMetrics>();
 
-            Dictionary<string, string> connectionStringValues = GetConnectionStringValues(container.ConnectionString);
+            var connection = CassandraConnectionString.Parse(container.ConnectionString);
             try
             {
-                ICluster _cluster = Cluster.Builder().AddContactPoint(connectionStringValues["address"]).Build();
-                ISession _session = _cluster.Connect();
+                using (var cluster = Cluster.Builder().AddContactPoint(connection.Address).Build()) {
+                    using (var session = cluster.Connect()) {
 
-                string query = "select * from system_schema.tables where keyspace_name = '" + connectionStringValues["keyspace"]  + "'";
-                RowSet res = _session.Execute(query);
+                        string query = $"select * from system_schema.tables where keyspace_name = '{connection.Keyspace}'";
+                        RowSet res = session.Execute(query);
 
-                var rows = res.GetRows().ToList();
-                if (rows.Count() > 0)
-                {
-                    foreach (Row row in rows)
-                    {
-                        var table_name = row.GetValue<string>("table_name");
-                        string queryCnt = "select * from " + connectionStringValues["keyspace"] + "." + table_name;
-                        RowSet resCnt = _session.Execute(queryCnt);
-                        var rowCnt = resCnt.GetRows().ToList();
+                        var rows = res.GetRows();
+                        foreach (Row row in rows) {
+                            var tableName = row.GetValue<string>("table_name");
+                            string queryCnt = $"select count(*) from {connection.Keyspace}.{tableName}";
+                            RowSet resCnt = session.Execute(queryCnt);
+                            var rowCnt = resCnt.First();
 
-                        var metrics = new DataCollectionMetrics();
-                        metrics.Name = table_name;
-                        metrics.RowCount = rowCnt.Count();
-
-                        dataCollectionMetrics.Add(metrics);
-
+                            dataCollectionMetrics.Add(new DataCollectionMetrics() {
+                                Name = tableName,
+                                RowCount = (long) rowCnt[0]
+                            }); //TODO: what about space usage?
+                        }
                     }
                 }
-
             }
             catch (Exception)
             {
@@ -124,14 +107,17 @@ namespace CassandraSupplyCollector
 
         public override (List<DataCollection>, List<DataEntity>) GetSchema(DataContainer container)
         {
-            Dictionary<string, string> connectionStringValues = GetConnectionStringValues(container.ConnectionString);
-            ICluster _cluster = Cluster.Builder().AddContactPoint(connectionStringValues["address"]).Build();
-            var tables = _cluster.Metadata.GetKeyspace(connectionStringValues["keyspace"]).GetTablesMetadata();
+            var connection = CassandraConnectionString.Parse(container.ConnectionString);
 
-            var dataEntities = tables.SelectMany(t => GetSchema(connectionStringValues["keyspace"], t.Name, _cluster, container));
-            var dataCollections = tables.Select(t => new DataCollection(container, t.Name));
+            using (var cluster = Cluster.Builder().AddContactPoint(connection.Address).Build()) {
+                var tables = cluster.Metadata.GetKeyspace(connection.Keyspace).GetTablesMetadata().ToList();
 
-            return (dataCollections.ToList(), dataEntities.ToList());
+                var dataEntities = tables.SelectMany(t =>
+                    GetSchema(connection.Keyspace, t.Name, cluster, container)).ToList();
+                var dataCollections = tables.Select(t => new DataCollection(container, t.Name)).ToList();
+
+                return (dataCollections, dataEntities);
+            }
         }
 
         private List<DataEntity> GetSchema(string keyspace, string tableName, ICluster cluster, DataContainer container)
@@ -143,7 +129,6 @@ namespace CassandraSupplyCollector
             {
                 AddEntityAndChildren(cluster, column, container, dataCollection, dataEntities);
             }
-            
 
             return dataEntities;
         }
@@ -206,30 +191,18 @@ namespace CassandraSupplyCollector
 
         public override bool TestConnection(DataContainer container)
         {
-            Dictionary<string, string> connectionStringValues = GetConnectionStringValues(container.ConnectionString);
+            var connection = CassandraConnectionString.Parse(container.ConnectionString);
 
             try {
-                ICluster _cluster = Cluster.Builder().AddContactPoint(connectionStringValues["address"]).Build();
-                _cluster.Connect();
+                using (var cluster = Cluster.Builder().AddContactPoint(connection.Address).Build()) {
+                    cluster.Connect();
+                }
                 return true;
             }
             catch (Exception)
             {
                 return false;
             }
-        }
-
-        private Dictionary<string, string>  GetConnectionStringValues(String connectionString)
-        {
-            string[] values = connectionString.Split("/");
-            var _connectionStringValues = new Dictionary<string, string>();
-            _connectionStringValues["address"] = values[0];
-            _connectionStringValues["port"] = values[1];
-            _connectionStringValues["keyspace"] = values[2];
-            _connectionStringValues["username"] = values[3];
-            _connectionStringValues["password"] = values[4];
-
-            return _connectionStringValues;
         }
 
         private DataType ConvertDataType(String dbDataType)
@@ -264,21 +237,4 @@ namespace CassandraSupplyCollector
             return DataType.Unknown;
         }
     }
-
-    public static class LinqExtensions
-    {
-        public static IEnumerable<TSource> DistinctBy<TSource, TKey>
-            (this IEnumerable<TSource> source, Func<TSource, TKey> keySelector)
-        {
-            HashSet<TKey> seenKeys = new HashSet<TKey>();
-            foreach (TSource element in source)
-            {
-                if (seenKeys.Add(keySelector(element)))
-                {
-                    yield return element;
-                }
-            }
-        }
-    }
-
 }

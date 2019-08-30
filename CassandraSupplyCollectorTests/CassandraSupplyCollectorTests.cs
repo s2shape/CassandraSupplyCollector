@@ -1,5 +1,3 @@
-using System;
-using System.Collections.Generic;
 using S2.BlackSwan.SupplyCollector.Models;
 using System.Linq;
 using Xunit;
@@ -9,9 +7,8 @@ namespace CassandraSupplyCollectorTests
 {
     public class CassandraSupplyCollectorTests
     {
-
-        public readonly CassandraSupplyCollector.CassandraSupplyCollector _instance;
-        public readonly DataContainer _container;
+        private readonly CassandraSupplyCollector.CassandraSupplyCollector _instance;
+        private readonly DataContainer _container;
 
         public CassandraSupplyCollectorTests()
         {
@@ -19,7 +16,7 @@ namespace CassandraSupplyCollectorTests
 
             _container = new DataContainer()
             {
-                ConnectionString = _instance.BuildConnectionString("127.0.0.1", "9042", "test", "", "")
+                ConnectionString = _instance.BuildConnectionString("127.0.0.1", 9042, "test", "", "")
             };
         }
 
@@ -50,7 +47,7 @@ namespace CassandraSupplyCollectorTests
         [Fact]
         public void GetDataCollectionMetricsTest()
         {
-            var metrics = new DataCollectionMetrics[] {
+            var metrics = new [] {
                 new DataCollectionMetrics()
                     {Name = "test_data_types", RowCount = 1, TotalSpaceKB = 8},
                 new DataCollectionMetrics()
@@ -90,10 +87,10 @@ namespace CassandraSupplyCollectorTests
         [Fact]
         public void GetTableNamesTest()
         {
-            var (tables, elements) = _instance.GetSchema(_container);
+            var (tables, _) = _instance.GetSchema(_container);
             Assert.Equal(5, tables.Count);
 
-            var tableNames = new string[] { "test_data_types", "test_index", "course", "teacher", "user" };
+            var tableNames = new [] { "test_data_types", "test_index", "course", "teacher", "user" };
             foreach (var tableName in tableNames)
             {
                 var table = tables.Find(x => x.Name.Equals(tableName));
