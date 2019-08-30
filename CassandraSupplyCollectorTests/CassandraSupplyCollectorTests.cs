@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using S2.BlackSwan.SupplyCollector.Models;
 using System.Linq;
 using Xunit;
@@ -16,7 +17,7 @@ namespace CassandraSupplyCollectorTests
 
             _container = new DataContainer()
             {
-                ConnectionString = _instance.BuildConnectionString("127.0.0.1", 9042, "test", "", "")
+                ConnectionString = _instance.BuildConnectionString("192.168.1.102", 9042, "test", "", "")
             };
         }
 
@@ -35,6 +36,8 @@ namespace CassandraSupplyCollectorTests
             entity = new DataEntity("prerq", DataType.Unknown, ColumnTypeCode.Map.ToString(), _container, new DataCollection(_container, "course"));
             samples = _instance.CollectSample(entity, 1);
             Assert.Contains("Neural Network", samples);
+
+
         }
 
         [Fact]
@@ -70,7 +73,7 @@ namespace CassandraSupplyCollectorTests
         {
             var (tables, elements) = _instance.GetSchema(_container);
             Assert.Equal(5, tables.Count);
-            Assert.Equal(23, elements.Count);
+            Assert.Equal(25, elements.Count);
 
             foreach (DataEntity element in elements)
             {
@@ -82,6 +85,25 @@ namespace CassandraSupplyCollectorTests
 
             columns = elements.Where(x => x.Collection.Name.Equals("course")).ToArray();
             Assert.Equal(3, columns.Length);
+
+            var nestedTypes = new Dictionary<string, string>() {
+                {"id", "Int"},
+                {"addr.street", "Text"},
+                {"addr.zip", "Int"},
+                {"addr.phones.alias", "Text"},
+                {"addr.phones.number", "Text"},
+                {"main_phone.alias", "Text"},
+                {"main_phone.number", "Text"}
+            };
+
+            columns = elements.Where(x => x.Collection.Name.Equals("user")).ToArray();
+            Assert.Equal(nestedTypes.Count, columns.Length);
+
+            foreach (var nestedType in nestedTypes) {
+                var col = columns.FirstOrDefault(x => x.Name.Equals(nestedType.Key));
+                Assert.True(col != null, $"Column {nestedType.Key} exists");
+                Assert.Equal(nestedType.Value, col.DbDataType);
+            }
         }
 
         [Fact]

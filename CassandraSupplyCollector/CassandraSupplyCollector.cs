@@ -127,55 +127,90 @@ namespace CassandraSupplyCollector
             var dataEntities = new List<DataEntity>();
             foreach (TableColumn column in table.TableColumns)
             {
-                AddEntityAndChildren(cluster, keyspace, column, container, dataCollection, dataEntities);
+                AddEntityAndChildren(cluster, keyspace, column, "", container, dataCollection, dataEntities);
             }
 
             return dataEntities;
         }
 
-        private void AddEntityAndChildren(ICluster cluster, string keyspace, TableColumn column, DataContainer container, DataCollection dataCollection, List<DataEntity> entities)
+        private void AddEntityAndChildren(ICluster cluster, string keyspace, TableColumn column, string prefix, DataContainer container, DataCollection dataCollection, List<DataEntity> entities)
         {
             switch (column.TypeCode)
             {
                 case ColumnTypeCode.List:
                     var listInfo = (ListColumnInfo)column.TypeInfo;
-                    entities.AddRange(GetDataEntitiesFromArray(cluster, keyspace, column.Name, listInfo.ValueTypeCode, container, dataCollection));
+                    if (listInfo.ValueTypeCode == ColumnTypeCode.Map || listInfo.ValueTypeCode == ColumnTypeCode.Udt) {
+                        entities.AddRange(GetDataEntitiesFromArray(cluster, keyspace, column.Name,
+                            prefix, listInfo.ValueTypeCode, listInfo.ValueTypeInfo, container, dataCollection));
+                    }
+                    else {
+                        entities.Add(new DataEntity($"{prefix}{column.Name}", ConvertDataType(listInfo.ValueTypeCode.ToString()), listInfo.ValueTypeCode.ToString(), container, dataCollection));
+                    }
                     break;
                 case ColumnTypeCode.Set:
                     var setInfo = (SetColumnInfo)column.TypeInfo;
-                    if (setInfo != null)
-                        entities.AddRange(GetDataEntitiesFromArray(cluster, keyspace, column.Name, setInfo.KeyTypeCode, container, dataCollection));
+                    if (setInfo.KeyTypeCode == ColumnTypeCode.Map || setInfo.KeyTypeCode == ColumnTypeCode.Udt)
+                    {
+                        entities.AddRange(GetDataEntitiesFromArray(cluster, keyspace, column.Name,
+                            prefix, setInfo.KeyTypeCode, setInfo.KeyTypeInfo, container, dataCollection));
+                    }
+                    else
+                    {
+                        entities.Add(new DataEntity($"{prefix}{column.Name}", ConvertDataType(setInfo.KeyTypeCode.ToString()), setInfo.KeyTypeCode.ToString(), container, dataCollection));
+                    }
                     break;
                 case ColumnTypeCode.Map:
                     var mapInfo = (MapColumnInfo)column.TypeInfo;
-                    entities.AddRange(GetDataEntitiesFromArray(cluster, keyspace, column.Name, mapInfo.KeyTypeCode, container, dataCollection));
-                    entities.AddRange(GetDataEntitiesFromArray(cluster, keyspace, column.Name, mapInfo.ValueTypeCode, container, dataCollection));
+
+                    if (mapInfo.KeyTypeCode == ColumnTypeCode.Map || mapInfo.KeyTypeCode == ColumnTypeCode.Udt) {
+                        entities.AddRange(GetDataEntitiesFromArray(cluster, keyspace, column.Name,
+                            prefix, mapInfo.KeyTypeCode, mapInfo.KeyTypeInfo, container, dataCollection));
+                    }
+                    else {
+                        entities.Add(new DataEntity($"{prefix}{column.Name}.key",
+                            ConvertDataType(mapInfo.KeyTypeCode.ToString()), mapInfo.KeyTypeCode.ToString(), container,
+                            dataCollection));
+                    }
+
+                    if (mapInfo.ValueTypeCode == ColumnTypeCode.Map || mapInfo.ValueTypeCode == ColumnTypeCode.Udt)
+                    {
+                        entities.AddRange(GetDataEntitiesFromArray(cluster, keyspace, column.Name, prefix, mapInfo.ValueTypeCode, mapInfo.ValueTypeInfo, container, dataCollection));
+                    }
+                    else
+                    {
+                        entities.Add(new DataEntity($"{prefix}{column.Name}.value",
+                            ConvertDataType(mapInfo.ValueTypeCode.ToString()), mapInfo.ValueTypeCode.ToString(), container,
+                            dataCollection));
+                    }
+                    
                     break;
                 case ColumnTypeCode.Udt:
                     var udtInfo = (UdtColumnInfo)column.TypeInfo;
                     var typeName = udtInfo.Name.Split(".")[1];
-                    entities.AddRange(GetDataEntitiesFromUdt(cluster, keyspace, typeName, container, dataCollection));
+                    entities.AddRange(GetDataEntitiesFromUdt(cluster, keyspace, typeName, $"{prefix}{column.Name}.", container, dataCollection));
                     break;
                 default:
-                    entities.Add(new DataEntity(column.Name, ConvertDataType(column.TypeCode.ToString()), column.TypeCode.ToString(), container, dataCollection));
+                    entities.Add(new DataEntity($"{prefix}{column.Name}", ConvertDataType(column.TypeCode.ToString()), column.TypeCode.ToString(), container, dataCollection));
                     break;
             }
         }
 
-        private List<DataEntity> GetDataEntitiesFromArray(ICluster cluster, string keyspace, string name, ColumnTypeCode type, DataContainer container, DataCollection dataCollection)
+        private List<DataEntity> GetDataEntitiesFromArray(ICluster cluster, string keyspace, string name, string prefix, ColumnTypeCode type, IColumnInfo columnInfo, DataContainer container, DataCollection dataCollection)
         {
             var entities = new List<DataEntity>();
 
             TableColumn column = new TableColumn();
             column.Name = name;
             column.TypeCode = type;
-            AddEntityAndChildren(cluster, keyspace, column, container, dataCollection, entities);
+            column.TypeInfo = columnInfo;
+            
+            AddEntityAndChildren(cluster, keyspace, column, prefix, container, dataCollection, entities);
 
             return entities;
         }
 
 
-        private List<DataEntity> GetDataEntitiesFromUdt(ICluster cluster, string keyspace, String udtName, DataContainer container, DataCollection dataCollection)
+        private List<DataEntity> GetDataEntitiesFromUdt(ICluster cluster, string keyspace, string udtName, string prefix, DataContainer container, DataCollection dataCollection)
         {
             var entities = new List<DataEntity>();
             var udtTable = cluster.Metadata.GetUdtDefinition(keyspace, udtName);
@@ -184,7 +219,8 @@ namespace CassandraSupplyCollector
                 TableColumn column = new TableColumn();
                 column.Name = field.Name;
                 column.TypeCode = field.TypeCode;
-                AddEntityAndChildren(cluster, keyspace, column, container, dataCollection, entities);
+                column.TypeInfo = field.TypeInfo;
+                AddEntityAndChildren(cluster, keyspace, column, prefix, container, dataCollection, entities);
             }
             return entities;
         }
