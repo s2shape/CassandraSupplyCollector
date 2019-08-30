@@ -6,3 +6,15 @@ Run `dotnet build`
 
 ## Tests
 Run `./run-tests.sh`
+
+## Known issues
+- UDT types are not fully supported. Cassandra doesn't support querying something like `SELECT list.map.udt FROM table`
+Requires creating/registering POCO objects to unwrap it when querying from database.
+
+Suggested algorithm:
+
+Parse database schema and generate code for corresponding POCO objects, compile using CSharpCompilation class. Load wrapper classes and register using UdtMap.For<> method.
+Adjust CollectSample() method to split data entity name by dot symbol, and query only first component. 
+Wrap the result to corresponding POCO object, and collect samples from it's properties.
+
+- Uses `count(*)` to calculate row count. Must be checked on a few millions records, probably find better alternative.

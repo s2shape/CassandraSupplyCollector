@@ -32,7 +32,10 @@ namespace CassandraSupplyCollector
                         double pct = 0.1 + (double)sampleSize / (totalRows <= 0 ? sampleSize : totalRows);
                         var r = new Random();
 
-                        query = $"SELECT {dataEntity.Name} FROM {dataEntity.Collection.Name} LIMIT {sampleSize}";
+                        //var parts = dataEntity.Name.Split(".");
+                        //query = $"SELECT {parts[0]} FROM {dataEntity.Collection.Name}"; //TODO: support UDT types
+                        query = $"SELECT {dataEntity.Name} FROM {dataEntity.Collection.Name}";
+
                         res = session.Execute(query);
                         var rows = res.GetRows();
                         foreach (Row row in rows) {
@@ -42,16 +45,27 @@ namespace CassandraSupplyCollector
                             }
                             else if (dataEntity.DbDataType.Equals(ColumnTypeCode.List.ToString())) {
                                 var list = row.GetValue<List<string>>(dataEntity.Name);
-                                foreach (var item in list)
+                                foreach (var item in list) {
                                     if (r.NextDouble() < pct)
                                         result.Add(item);
+
+                                    if (result.Count >= sampleSize)
+                                        break;
+                                }
                             }
                             else if (dataEntity.DbDataType.Equals(ColumnTypeCode.Map.ToString())) {
                                 var list = row.GetValue<IDictionary<string, int>>(dataEntity.Name);
-                                foreach (var item in list)
+                                foreach (var item in list) {
                                     if (r.NextDouble() < pct)
                                         result.Add(item.Key);
+
+                                    if (result.Count >= sampleSize)
+                                        break;
+                                }
                             }
+
+                            if (result.Count >= sampleSize)
+                                break;
                         }
                     }
                 }
