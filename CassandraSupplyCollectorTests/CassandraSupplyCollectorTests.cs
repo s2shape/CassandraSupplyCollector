@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using S2.BlackSwan.SupplyCollector.Models;
 using System.Linq;
@@ -17,7 +18,12 @@ namespace CassandraSupplyCollectorTests
 
             _container = new DataContainer()
             {
-                ConnectionString = _instance.BuildConnectionString("192.168.1.102", 9042, "test", "", "")
+                ConnectionString = _instance.BuildConnectionString(
+                    Environment.GetEnvironmentVariable("CASSANDRA_HOST"),
+                    9042,
+                    Environment.GetEnvironmentVariable("CASSANDRA_KEYSPACE"),
+                    "", ""
+                    )
             };
         }
 

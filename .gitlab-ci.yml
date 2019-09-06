@@ -1,0 +1,29 @@
+image: microsoft/dotnet:latest
+
+stages:
+  - build
+  - test
+
+variables:
+  CASSANDRA_HOST: cassandra
+  CASSANDRA_KEYSPACE: test
+
+before_script:
+  - dotnet restore
+
+build:
+  stage: build
+  script:
+    - dotnet build
+
+test:
+  stage: test
+
+  services:
+    - cassandra
+
+  script:
+    - apt-get update && apt-get install python python-pip && pip install cqlsh
+    - cqlsh -f CassandraSupplyCollectorTests/tests/data.sql $CASSANDRA_HOST
+    - dotnet build
+    - dotnet test

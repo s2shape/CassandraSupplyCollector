@@ -4,7 +4,11 @@ docker cp CassandraSupplyCollectorTests/tests/data.sql cassandra:/data.sql
 sleep 10
 docker exec -i cassandra cqlsh -f /data.sql
 
+export CASSANDRA_HOST=localhost
+export CASSANDRA_KEYSPACE=test
+
 dotnet build
 dotnet test
+
 docker stop cassandra
 docker rm cassandra
