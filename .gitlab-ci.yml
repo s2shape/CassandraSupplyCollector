@@ -23,7 +23,7 @@ test:
     - cassandra
 
   script:
-    - apt-get update && apt-get install python python-pip && pip install cqlsh
+    - apt-get update && apt-get install -y python python-pip && pip install cqlsh
     - cqlsh -f CassandraSupplyCollectorTests/tests/data.sql $CASSANDRA_HOST
     - dotnet build
     - dotnet test
