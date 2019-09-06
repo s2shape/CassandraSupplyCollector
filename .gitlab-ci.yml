@@ -20,7 +20,7 @@ test:
   stage: test
 
   services:
-    - cassandra
+    - cassandra:3.0
 
   script:
     - apt-get update && apt-get install -y python python-pip && pip install cqlsh
