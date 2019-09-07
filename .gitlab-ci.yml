@@ -20,10 +20,9 @@ test:
   stage: test
 
   services:
-    - cassandra
+    - name: itsplus/s2shape-cassandra-test
+      alias: cassandra
 
   script:
-    - apt-get update && apt-get install -y python3 python3-pip && pip3 install cqlsh
-    - cqlsh -f CassandraSupplyCollectorTests/tests/data.sql $CASSANDRA_HOST
     - dotnet build
     - dotnet test
