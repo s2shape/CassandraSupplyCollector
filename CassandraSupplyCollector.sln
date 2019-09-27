@@ -1,9 +1,12 @@
-
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 15
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CassandraSupplyCollector", "CassandraSupplyCollector\CassandraSupplyCollector.csproj", "{89016827-DA43-4B99-8B9E-81825428FB49}"
+VisualStudioVersion = 15.0.28307.757
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CassandraSupplyCollector", "CassandraSupplyCollector\CassandraSupplyCollector.csproj", "{89016827-DA43-4B99-8B9E-81825428FB49}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CassandraSupplyCollectorTests", "CassandraSupplyCollectorTests\CassandraSupplyCollectorTests.csproj", "{4FBEBF6D-6332-4F8A-B3DC-E56EA89F0655}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CassandraSupplyCollectorTests", "CassandraSupplyCollectorTests\CassandraSupplyCollectorTests.csproj", "{4FBEBF6D-6332-4F8A-B3DC-E56EA89F0655}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CassandraSupplyCollectorLoader", "CassandraSupplyCollectorLoader\CassandraSupplyCollectorLoader.csproj", "{7E18F7DE-3985-4098-9710-521EDFB0253E}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -19,5 +22,15 @@ Global
 		{4FBEBF6D-6332-4F8A-B3DC-E56EA89F0655}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{4FBEBF6D-6332-4F8A-B3DC-E56EA89F0655}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{4FBEBF6D-6332-4F8A-B3DC-E56EA89F0655}.Release|Any CPU.Build.0 = Release|Any CPU
+		{7E18F7DE-3985-4098-9710-521EDFB0253E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{7E18F7DE-3985-4098-9710-521EDFB0253E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{7E18F7DE-3985-4098-9710-521EDFB0253E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{7E18F7DE-3985-4098-9710-521EDFB0253E}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {3A8BA88F-9465-4EBF-9915-04277543CE3E}
 	EndGlobalSection
 EndGlobal

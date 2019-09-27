@@ -1,7 +1,9 @@
 #!/bin/sh
 docker run --name cassandra -d -e CASSANDRA_BROADCAST_ADDRESS=127.0.0.1 -p 9042:9042 cassandra:3
-docker cp CassandraSupplyCollectorTests/tests/data.sql cassandra:/data.sql
+docker cp CassandraSupplyCollectorLoader/tests/init.sql cassandra:/init.sql
+docker cp CassandraSupplyCollectorLoader/tests/data.sql cassandra:/data.sql
 sleep 10
+docker exec -i cassandra cqlsh -f /init.sql
 docker exec -i cassandra cqlsh -f /data.sql
 
 export CASSANDRA_HOST=localhost

@@ -7,13 +7,15 @@ using Cassandra;
 
 namespace CassandraSupplyCollectorTests
 {
-    public class CassandraSupplyCollectorTests
+    public class CassandraSupplyCollectorTests : IClassFixture<LaunchSettingsFixture>
     {
         private readonly CassandraSupplyCollector.CassandraSupplyCollector _instance;
         private readonly DataContainer _container;
+        private LaunchSettingsFixture _fixture;
 
-        public CassandraSupplyCollectorTests()
+        public CassandraSupplyCollectorTests(LaunchSettingsFixture fixture)
         {
+            _fixture = fixture;
             _instance = new CassandraSupplyCollector.CassandraSupplyCollector();
 
             _container = new DataContainer()
