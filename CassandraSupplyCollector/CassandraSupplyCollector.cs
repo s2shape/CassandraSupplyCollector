@@ -30,6 +30,7 @@ namespace CassandraSupplyCollector
                         long totalRows = (long) rowCount[0];
 
                         double pct = 0.1 + (double)sampleSize / (totalRows <= 0 ? sampleSize : totalRows);
+
                         var r = new Random();
 
                         //var parts = dataEntity.Name.Split(".");
@@ -39,13 +40,11 @@ namespace CassandraSupplyCollector
                         res = session.Execute(query);
                         var rows = res.GetRows();
                         foreach (Row row in rows) {
-                            if (dataEntity.DbDataType.Equals(ColumnTypeCode.Text.ToString())) {
-                                if (r.NextDouble() < pct)
-                                    result.Add(row.GetValue<string>(dataEntity.Name));
-                            }
-                            else if (dataEntity.DbDataType.Equals(ColumnTypeCode.List.ToString())) {
+                            if (dataEntity.DbDataType.Equals(ColumnTypeCode.List.ToString()))
+                            {
                                 var list = row.GetValue<List<string>>(dataEntity.Name);
-                                foreach (var item in list) {
+                                foreach (var item in list)
+                                {
                                     if (r.NextDouble() < pct)
                                         result.Add(item);
 
@@ -53,14 +52,38 @@ namespace CassandraSupplyCollector
                                         break;
                                 }
                             }
-                            else if (dataEntity.DbDataType.Equals(ColumnTypeCode.Map.ToString())) {
-                                var list = row.GetValue<IDictionary<string, int>>(dataEntity.Name);
-                                foreach (var item in list) {
+                            else if (dataEntity.DbDataType.Equals(ColumnTypeCode.Map.ToString()))
+                            {
+                                var list = row.GetValue<IDictionary<string, int>>(dataEntity.Name); //TODO: only map<string,int> type supported????
+                                foreach (var item in list)
+                                {
                                     if (r.NextDouble() < pct)
                                         result.Add(item.Key);
 
                                     if (result.Count >= sampleSize)
                                         break;
+                                }
+                            }
+                            else
+                            {
+                                if (r.NextDouble() < pct) {
+                                    switch (dataEntity.DataType) {
+                                        case DataType.String:
+                                            result.Add(row.GetValue<string>(dataEntity.Name));
+                                            break;
+                                        case DataType.Int:
+                                            result.Add(row.GetValue<int>(dataEntity.Name).ToString());
+                                            break;
+                                        case DataType.Double:
+                                            result.Add(row.GetValue<double>(dataEntity.Name).ToString());
+                                            break;
+                                        case DataType.DateTime:
+                                            result.Add(row.GetValue<DateTime>(dataEntity.Name).ToString());
+                                            break;
+                                        default:
+                                            result.Add(row.GetValue<object>(dataEntity.Name).ToString());
+                                            break;
+                                    }
                                 }
                             }
 

@@ -20,3 +20,4 @@ Wrap the result to corresponding POCO object, and collect samples from it's prop
 - Uses `count(*)` to calculate row count. Must be checked on a few millions records, probably we should find some better alternative.
 - Table size is not calculated, there are no methods in C# driver. However, this information is available in `nodetool cfstats` output.
 As well as row count. Need to find a way to get this information from C#
+- Problem with data types support. Scalar types supported - string,int,double,datetime. Lists - only set<string>, maps - only map<text,int>
