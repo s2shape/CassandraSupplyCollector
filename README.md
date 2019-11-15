@@ -10,6 +10,7 @@ Run `./run-tests.sh`
 ## Known issues
 - UDT types are not fully supported. Cassandra doesn't support querying something like `SELECT list.map.udt FROM table`
 Requires creating/registering POCO objects to unwrap it when querying from database.
+- Random sampling test is disabled - returns unpredictable amount of samples
 
 Suggested algorithm:
 
